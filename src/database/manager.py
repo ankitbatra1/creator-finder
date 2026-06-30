@@ -3,13 +3,11 @@ import sqlite3
 from config import DATABASE_PATH
 
 
-class Database:
+class DatabaseManager:
 
     def __init__(self):
 
-        self.conn = sqlite3.connect(
-            DATABASE_PATH
-        )
+        self.conn = sqlite3.connect(DATABASE_PATH)
 
         self.conn.row_factory = sqlite3.Row
 
@@ -17,7 +15,7 @@ class Database:
 
         self.create_tables()
 
-    # ====================================================
+    # =====================================================
 
     def create_tables(self):
 
@@ -35,7 +33,7 @@ class Database:
 
             total_views INTEGER DEFAULT 0,
 
-            total_videos INTEGER DEFAULT 0,
+            video_count INTEGER DEFAULT 0,
 
             description TEXT,
 
@@ -47,115 +45,93 @@ class Database:
 
             keyword_found TEXT,
 
-            scraped INTEGER DEFAULT 0
+            discovered_from TEXT,
+
+            processed INTEGER DEFAULT 0
 
         )
-
-        """)
-
-        self.cursor.execute("""
-
-        CREATE TABLE IF NOT EXISTS contacts(
-
-            channel_id TEXT PRIMARY KEY,
-
-            youtube_email TEXT,
-
-            youtube_phone TEXT,
-
-            website TEXT,
-
-            website_email TEXT,
-
-            website_phone TEXT,
-
-            instagram TEXT,
-
-            instagram_email TEXT,
-
-            instagram_phone TEXT,
-
-            linktree TEXT,
-
-            final_email TEXT,
-
-            final_phone TEXT,
-
-            email_source TEXT,
-
-            phone_source TEXT,
-
-            completed INTEGER DEFAULT 0
-
-        )
-
-        """)
-
-        self.cursor.execute("""
-
-        CREATE TABLE IF NOT EXISTS jobs(
-
-            keyword TEXT,
-
-            search_type TEXT,
-
-            status TEXT,
-
-            PRIMARY KEY(keyword,search_type)
-
-        )
-
-        """)
-
-        self.cursor.execute("""
-
-        CREATE INDEX IF NOT EXISTS idx_name
-
-        ON channels(channel_name)
-
-        """)
-
-        self.cursor.execute("""
-
-        CREATE INDEX IF NOT EXISTS idx_email
-
-        ON contacts(final_email)
 
         """)
 
         self.conn.commit()
 
-    # ====================================================
+    # =====================================================
 
-    def execute(self, query, values=None):
+    def save_channel(
 
-        if values:
+        self,
 
-            self.cursor.execute(query, values)
+        channel
 
-        else:
+    ):
 
-            self.cursor.execute(query)
+        self.cursor.execute(
 
-    # ====================================================
+            """
 
-    def fetchall(self):
+            INSERT OR IGNORE INTO channels(
 
-        return self.cursor.fetchall()
+                channel_id,
 
-    # ====================================================
+                channel_name,
 
-    def fetchone(self):
+                channel_url,
 
-        return self.cursor.fetchone()
+                keyword_found,
 
-    # ====================================================
+                discovered_from
+
+            )
+
+            VALUES(
+
+                ?,?,?,?,?
+
+            )
+
+            """,
+
+            (
+
+                channel["channel_id"],
+
+                channel["channel_name"],
+
+                channel["channel_url"],
+
+                channel["keyword"],
+
+                channel["source"]
+
+            )
+
+        )
+
+    # =====================================================
 
     def commit(self):
 
         self.conn.commit()
 
-    # ====================================================
+    # =====================================================
+
+    def total_channels(self):
+
+        self.cursor.execute(
+
+            """
+
+            SELECT COUNT(*)
+
+            FROM channels
+
+            """
+
+        )
+
+        return self.cursor.fetchone()[0]
+
+    # =====================================================
 
     def close(self):
 

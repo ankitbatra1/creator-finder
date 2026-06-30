@@ -1,7 +1,7 @@
 import asyncio
 
 from src.crawler.browser import BrowserManager
-from src.parser.youtube_parser import YouTubeParser
+from src.crawler.scroll_manager import ScrollManager
 
 
 async def main():
@@ -14,17 +14,23 @@ async def main():
         "https://www.youtube.com/results?search_query=college+vlog+india"
     )
 
-    html = await browser.html()
+    scroll = ScrollManager(
 
-    parser = YouTubeParser(html)
+        browser.page,
 
-    channels = parser.all_channels()
+        delay=2000,
 
-    print(len(channels))
+        max_scrolls=20
 
-    for channel in channels[:10]:
+    )
 
-        print(channel)
+    await scroll.scroll_to_bottom()
+
+    print(
+
+        "Finished"
+
+    )
 
     await browser.close()
 
