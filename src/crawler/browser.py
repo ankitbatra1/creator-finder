@@ -1,50 +1,86 @@
-from playwright.sync_api import sync_playwright
+from pathlib import Path
+from playwright.async_api import (
+    async_playwright,
+    BrowserContext,
+    Browser,
+    Page
+)
 
 from config import (
+    PROFILE_DIR,
     HEADLESS,
-    SLOW_MO,
     VIEWPORT,
     USER_AGENT,
-    PROFILE_DIR
+    SLOW_MO
 )
 
 
-class Browser:
+class BrowserManager:
+    """
+    Playwright Browser Manager
+
+    Single browser
+    Multiple pages
+    Persistent profile
+    """
 
     def __init__(self):
 
         self.playwright = None
-        self.browser = None
-        self.context = None
-        self.page = None
 
-    # =====================================================
+        self.browser: Browser | None = None
 
-    def start(self):
+        self.context: BrowserContext | None = None
 
-        self.playwright = sync_playwright().start()
+        self.page: Page | None = None
 
-        self.context = self.playwright.chromium.launch_persistent_context(
+    # ======================================================
 
-            user_data_dir=PROFILE_DIR,
+    async def start(self):
 
-            headless=HEADLESS,
+        profile = Path(PROFILE_DIR)
 
-            slow_mo=SLOW_MO,
-
-            viewport=VIEWPORT,
-
-            user_agent=USER_AGENT
-
+        profile.mkdir(
+            parents=True,
+            exist_ok=True
         )
 
-        self.page = self.context.new_page()
+        self.playwright = await async_playwright().start()
 
-    # =====================================================
+        self.context = (
+            await self.playwright.chromium.launch_persistent_context(
 
-    def open(self, url):
+                user_data_dir=str(profile),
 
-        self.page.goto(
+                headless=HEADLESS,
+
+                slow_mo=SLOW_MO,
+
+                viewport=VIEWPORT,
+
+                user_agent=USER_AGENT
+
+            )
+        )
+
+        pages = self.context.pages
+
+        if pages:
+
+            self.page = pages[0]
+
+        else:
+
+            self.page = await self.context.new_page()
+
+    # ======================================================
+
+    async def goto(
+        self,
+        url: str
+    ):
+
+        await self.page.goto(
 
             url,
 
@@ -52,23 +88,29 @@ class Browser:
 
         )
 
-    # =====================================================
+    # ======================================================
 
-    def html(self):
+    async def html(self):
 
-        return self.page.content()
+        return await self.page.content()
 
-    # =====================================================
+    # ======================================================
 
-    def title(self):
+    async def title(self):
 
-        return self.page.title()
+        return await self.page.title()
 
-    # =====================================================
+    # ======================================================
 
-    def scroll_bottom(self):
+    async def url(self):
 
-        self.page.evaluate("""
+        return self.page.url
+
+    # ======================================================
+
+    async def scroll_bottom(self):
+
+        await self.page.evaluate("""
 
         window.scrollTo(
             0,
@@ -77,42 +119,94 @@ class Browser:
 
         """)
 
-    # =====================================================
+    # ======================================================
 
-    def page_height(self):
+    async def page_height(self):
 
-        return self.page.evaluate("""
+        return await self.page.evaluate(
 
-        document.body.scrollHeight
-
-        """)
-
-    # =====================================================
-
-    def wait(self, seconds):
-
-        self.page.wait_for_timeout(
-
-            seconds * 1000
+            "document.body.scrollHeight"
 
         )
 
-    # =====================================================
+    # ======================================================
 
-    def click(self, selector):
+    async def wait(
+        self,
+        milliseconds: int
+    ):
 
-        self.page.locator(selector).click()
+        await self.page.wait_for_timeout(
 
-    # =====================================================
+            milliseconds
 
-    def locator(self, selector):
+        )
+
+    # ======================================================
+
+    async def click(
+        self,
+        selector: str
+    ):
+
+        await self.page.locator(
+
+            selector
+
+        ).click()
+
+    # ======================================================
+
+    async def fill(
+        self,
+        selector: str,
+        value: str
+    ):
+
+        await self.page.locator(
+
+            selector
+
+        ).fill(value)
+
+    # ======================================================
+
+    async def locator(
+        self,
+        selector: str
+    ):
 
         return self.page.locator(selector)
 
-    # =====================================================
+    # ======================================================
 
-    def close(self):
+    async def screenshot(
+        self,
+        path: str
+    ):
 
-        self.context.close()
+        await self.page.screenshot(
 
-        self.playwright.stop()
+            path=path,
+
+            full_page=True
+
+        )
+
+    # ======================================================
+
+    async def new_tab(self):
+
+        return await self.context.new_page()
+
+    # ======================================================
+
+    async def close(self):
+
+        if self.context:
+
+            await self.context.close()
+
+        if self.playwright:
+
+            await self.playwright.stop()
