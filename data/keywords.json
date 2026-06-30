@@ -1,0 +1,41 @@
+{
+  "student": {
+    "english": [
+      "college vlog india",
+      "hostel vlog india",
+      "engineering vlog",
+      "medical college vlog",
+      "day in my life college"
+    ],
+    "hinglish": [
+      "college ki life",
+      "hostel life",
+      "mera college",
+      "engineering life",
+      "mbbs life"
+    ],
+    "hindi": [
+      "कॉलेज व्लॉग",
+      "होस्टल लाइफ",
+      "मेरी कॉलेज लाइफ"
+    ]
+  },
+  "daily": {
+    "english": [
+      "daily vlog india",
+      "day in my life",
+      "morning routine",
+      "night routine"
+    ],
+    "hinglish": [
+      "mera din",
+      "ghar ki routine",
+      "meri routine",
+      "aaj ka din"
+    ],
+    "hindi": [
+      "आज का दिन",
+      "मेरी दिनचर्या"
+    ]
+  }
+}

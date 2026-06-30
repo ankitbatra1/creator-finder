@@ -138,3 +138,11 @@ class DatabaseManager:
         self.conn.commit()
 
         self.conn.close()
+
+    def recreate_database(self):
+
+        self.cursor.execute("DROP TABLE IF EXISTS channels")
+
+        self.create_tables()
+
+        self.conn.commit()

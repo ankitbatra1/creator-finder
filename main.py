@@ -1,116 +1,35 @@
 import asyncio
-import argparse
 
+from src.database.manager import DatabaseManager
 from src.crawler.browser import BrowserManager
+from src.crawler.search_engine import SearchEngine
 
-
-class CreatorFinder:
-
-    def __init__(self):
-
-        self.browser = BrowserManager()
-
-    # =====================================================
-
-    async def discover(self):
-
-        print("\n========== DISCOVERY ==========\n")
-
-        await self.browser.start()
-
-        await self.browser.goto(
-            "https://www.youtube.com"
-        )
-
-        print(
-            "Browser Started"
-        )
-
-        print(
-            "Title :",
-            await self.browser.title()
-        )
-
-        print(
-            "URL :",
-            await self.browser.url()
-        )
-
-        await self.browser.close()
-
-        print(
-            "\nDiscovery Finished."
-        )
-
-    # =====================================================
-
-    async def contacts(self):
-
-        print(
-            "\nContacts Module (Coming Soon)"
-        )
-
-    # =====================================================
-
-    async def export(self):
-
-        print(
-            "\nExport Module (Coming Soon)"
-        )
-
-    # =====================================================
-
-    async def full(self):
-
-        await self.discover()
-
-        await self.contacts()
-
-        await self.export()
-
-
-# =========================================================
 
 async def main():
 
-    parser = argparse.ArgumentParser()
+    db = DatabaseManager()
 
-    parser.add_argument(
+    browser = BrowserManager()
 
-        "command",
+    await browser.start()
 
-        choices=[
-            "discover",
-            "contacts",
-            "export",
-            "full"
-        ]
+    engine = SearchEngine(
+
+        browser,
+
+        db
 
     )
 
-    args = parser.parse_args()
+    await engine.search(
 
-    app = CreatorFinder()
+        "college vlog india"
 
-    if args.command == "discover":
+    )
 
-        await app.discover()
+    await browser.close()
 
-    elif args.command == "contacts":
-
-        await app.contacts()
-
-    elif args.command == "export":
-
-        await app.export()
-
-    elif args.command == "full":
-
-        await app.full()
+    db.close()
 
 
-# =========================================================
-
-if __name__ == "__main__":
-
-    asyncio.run(main())
+asyncio.run(main())
