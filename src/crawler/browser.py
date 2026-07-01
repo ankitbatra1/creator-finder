@@ -77,16 +77,21 @@ class BrowserManager:
 
     async def goto(
         self,
-        url: str
+        url: str,
+        timeout: int = 60000
     ):
 
         await self.page.goto(
 
             url,
 
-            wait_until="networkidle"
+            wait_until="domcontentloaded",
+
+            timeout=timeout
 
         )
+
+        await self.page.wait_for_timeout(3000)
 
     # ======================================================
 

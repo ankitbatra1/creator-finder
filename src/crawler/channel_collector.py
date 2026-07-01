@@ -3,33 +3,22 @@ from src.database.manager import DatabaseManager
 
 
 class ChannelCollector:
-    """
-    Parses search HTML and stores unique channels.
-    """
 
     def __init__(self, db: DatabaseManager):
 
         self.db = db
 
-        self.seen = set()
+        self.memory = set()
 
     # =====================================================
 
-    def collect(
-
-        self,
-
-        html: str,
-
-        keyword: str
-
-    ) -> int:
+    def collect(self, html: str, keyword: str):
 
         parser = YouTubeParser(html)
 
         channels = parser.all_channels()
 
-        new_channels = 0
+        added = 0
 
         for channel in channels:
 
@@ -37,22 +26,21 @@ class ChannelCollector:
 
             cid = channel["channel_id"]
 
-            if cid in self.seen:
-
+            if cid in self.memory:
                 continue
 
-            self.seen.add(cid)
+            self.memory.add(cid)
 
             self.db.save_channel(channel)
 
-            new_channels += 1
+            added += 1
 
         self.db.commit()
 
-        return new_channels
+        return added
 
     # =====================================================
 
-    def reset(self):
+    def clear(self):
 
-        self.seen.clear()
+        self.memory.clear()

@@ -1,66 +1,91 @@
-from urllib.parse import quote_plus
-
-from src.crawler.scroll_manager import ScrollManager
+from src.crawler.youtube_search import YouTubeSearch
 from src.crawler.channel_collector import ChannelCollector
-from src.database.manager import DatabaseManager
-from src.crawler.browser import BrowserManager
+from src.crawler.query_generator import QueryGenerator
 
-from config import (
-    YOUTUBE_SEARCH,
-    VIDEO_FILTER,
-    CHANNEL_FILTER
-)
+from src.database.channel_repository import ChannelRepository
+from src.database.job_repository import JobRepository
+from src.database.manager import DatabaseManager
+
+from src.crawler.browser import BrowserManager
 
 
 class SearchEngine:
 
     def __init__(
+
         self,
+
         browser: BrowserManager,
+
         db: DatabaseManager
+
     ):
 
         self.browser = browser
+
         self.db = db
 
-        self.collector = ChannelCollector(db)
+        self.repository = ChannelRepository(db)
+
+        self.collector = ChannelCollector(
+
+            self.db
+
+        )
+
+        self.jobs = JobRepository(db)
+
+        self.youtube = YouTubeSearch(browser)
+
+        self.generator = QueryGenerator()
 
     # =====================================================
 
-    async def search_video(
+    async def search_keyword(
+
         self,
+
         keyword: str
+
     ):
 
-        url = (
+        if self.jobs.completed(
 
-            YOUTUBE_SEARCH
+            keyword,
 
-            + quote_plus(keyword)
+            "video"
 
-            + VIDEO_FILTER
+        ):
 
-        )
+            print(
 
-        print(f"\nSearching Videos : {keyword}")
+                f"Skipped : {keyword}"
 
-        await self.browser.goto(url)
+            )
 
-        scroll = ScrollManager(
+            return
 
-            self.browser.page,
+        self.jobs.create(
 
-            delay=1500,
+            keyword,
 
-            max_scrolls=20,
-
-            max_empty_scrolls=3
+            "video"
 
         )
 
-        await scroll.scroll_to_bottom()
+        self.jobs.start(
 
-        html = await self.browser.html()
+            keyword,
+
+            "video"
+
+        )
+
+        html = await self.youtube.video(
+
+            keyword
+
+        )
 
         added = self.collector.collect(
 
@@ -70,92 +95,104 @@ class SearchEngine:
 
         )
 
+        self.jobs.finish(
+
+            keyword,
+
+            "video"
+
+        )
+
+        print()
+
         print(
 
-            f"Video Search Added : {added}"
+            "Collected :",
+
+            added
+
+        )
+
+        print(
+
+            "Database :",
+
+            self.repository.total()
 
         )
 
     # =====================================================
 
-    async def search_channel(
+    async def run(
 
         self,
 
-        keyword: str
+        limit=None
 
     ):
 
-        url = (
+        queries = self.generator.generate()
 
-            YOUTUBE_SEARCH
+        if limit:
 
-            + quote_plus(keyword)
+            queries = queries[:limit]
 
-            + CHANNEL_FILTER
+        print()
 
-        )
+        print(
 
-        print(f"\nSearching Channels : {keyword}")
+            "Queries :",
 
-        await self.browser.goto(url)
-
-        scroll = ScrollManager(
-
-            self.browser.page,
-
-            delay=1500,
-
-            max_scrolls=10,
-
-            max_empty_scrolls=3
+            len(queries)
 
         )
 
-        await scroll.scroll_to_bottom()
+        print()
 
-        html = await self.browser.html()
+        for i, keyword in enumerate(
 
-        added = self.collector.collect(
+            queries,
 
-            html,
+            start=1
 
-            keyword
+        ):
+
+            print(
+
+                "=" * 60
+
+            )
+
+            print(
+
+                f"{i}/{len(queries)}"
+
+            )
+
+            await self.search_keyword(
+
+                keyword
+
+            )
+
+        print()
+
+        print(
+
+            "=" * 60
 
         )
 
         print(
 
-            f"Channel Search Added : {added}"
-
-        )
-
-    # =====================================================
-
-    async def search(
-
-        self,
-
-        keyword: str
-
-    ):
-
-        await self.search_video(
-
-            keyword
-
-        )
-
-        await self.search_channel(
-
-            keyword
+            "Finished"
 
         )
 
         print(
 
-            "\nDatabase Total :",
+            "Total Channels :",
 
-            self.db.total_channels()
+            self.repository.total()
 
         )

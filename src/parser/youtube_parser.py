@@ -1,154 +1,283 @@
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+import json
+import re
 
 
 class YouTubeParser:
-    """
-    Parses YouTube Search HTML.
-
-    Returns unique channels from:
-        - Video Search
-        - Channel Search
-    """
-
-    BASE_URL = "https://www.youtube.com"
 
     def __init__(self, html: str):
 
-        self.soup = BeautifulSoup(
-            html,
-            "lxml"
-        )
+        self.html = html
 
-    # =========================================================
+        self.data = self._extract_json()
 
-    def video_channels(self):
+    # =====================================================
 
-        channels = {}
+    def _extract_json(self):
 
-        videos = self.soup.select(
-            "ytd-video-renderer"
-        )
+        patterns = [
 
-        for video in videos:
+            r"var ytInitialData = (.*?);</script>",
 
-            link = video.select_one(
-                "a.yt-simple-endpoint.yt-formatted-string"
+            r'window\["ytInitialData"\] = (.*?);</script>',
+
+            r"ytInitialData = (.*?);</script>"
+
+        ]
+
+        for pattern in patterns:
+
+            match = re.search(
+
+                pattern,
+
+                self.html,
+
+                re.DOTALL
+
             )
 
-            if link is None:
-                continue
+            if match:
 
-            href = link.get("href", "")
+                try:
 
-            if not href.startswith("/@") and not href.startswith("/channel/"):
-                continue
+                    return json.loads(
 
-            channel_url = urljoin(
-                self.BASE_URL,
-                href
-            )
+                        match.group(1)
 
-            channel_name = (
-                link.get_text(strip=True)
-            )
+                    )
 
-            channel_id = href
+                except:
 
-            channels[channel_id] = {
+                    pass
 
-                "channel_id": channel_id,
+        return {}
 
-                "channel_name": channel_name,
+    # =====================================================
 
-                "channel_url": channel_url,
+    def _walk(
 
-                "source": "video"
+        self,
 
-            }
+        obj
 
-        return list(
-            channels.values()
-        )
+    ):
 
-    # =========================================================
+        if isinstance(obj, dict):
 
-    def channel_results(self):
+            yield obj
 
-        channels = {}
+            for value in obj.values():
 
-        cards = self.soup.select(
-            "ytd-channel-renderer"
-        )
+                yield from self._walk(value)
 
-        for card in cards:
+        elif isinstance(obj, list):
 
-            link = card.select_one(
-                "a#main-link"
-            )
+            for item in obj:
 
-            if link is None:
+                yield from self._walk(item)
 
-                link = card.select_one(
-                    "a.yt-simple-endpoint"
-                )
-
-            if link is None:
-                continue
-
-            href = link.get(
-                "href",
-                ""
-            )
-
-            if not href:
-                continue
-
-            channel_url = urljoin(
-                self.BASE_URL,
-                href
-            )
-
-            channel_name = (
-                link.get_text(strip=True)
-            )
-
-            channel_id = href
-
-            channels[channel_id] = {
-
-                "channel_id": channel_id,
-
-                "channel_name": channel_name,
-
-                "channel_url": channel_url,
-
-                "source": "channel"
-
-            }
-
-        return list(
-            channels.values()
-        )
-
-    # =========================================================
+    # =====================================================
 
     def all_channels(self):
 
-        data = {}
+        channels = {}
 
-        for channel in self.video_channels():
+        for node in self._walk(self.data):
 
-            data[
-                channel["channel_id"]
-            ] = channel
+            renderer = node.get(
 
-        for channel in self.channel_results():
+                "videoRenderer"
 
-            data[
-                channel["channel_id"]
-            ] = channel
+            )
+
+            if renderer:
+
+                owner = renderer.get(
+
+                    "ownerText",
+
+                    {}
+
+                )
+
+                runs = owner.get(
+
+                    "runs",
+
+                    []
+
+                )
+
+                if not runs:
+
+                    continue
+
+                run = runs[0]
+
+                name = run.get(
+
+                    "text",
+
+                    ""
+
+                )
+
+                endpoint = run.get(
+
+                    "navigationEndpoint",
+
+                    {}
+
+                )
+
+                browse = endpoint.get(
+
+                    "browseEndpoint",
+
+                    {}
+
+                )
+
+                browse_id = browse.get(
+
+                    "browseId",
+
+                    ""
+
+                )
+
+                canonical = browse.get(
+
+                    "canonicalBaseUrl",
+
+                    ""
+
+                )
+
+                if canonical:
+
+                    url = (
+
+                        "https://www.youtube.com"
+
+                        + canonical
+
+                    )
+
+                else:
+
+                    url = (
+
+                        "https://www.youtube.com/channel/"
+
+                        + browse_id
+
+                    )
+
+                if browse_id:
+
+                    channels[browse_id] = {
+
+                        "channel_id": browse_id,
+
+                        "channel_name": name,
+
+                        "channel_url": url,
+
+                        "source": "video"
+
+                    }
+
+        for node in self._walk(self.data):
+
+            renderer = node.get(
+
+                "channelRenderer"
+
+            )
+
+            if renderer is None:
+
+                continue
+
+            cid = renderer.get(
+
+                "channelId",
+
+                ""
+
+            )
+
+            name = renderer.get(
+
+                "title",
+
+                {}
+
+            ).get(
+
+                "simpleText",
+
+                ""
+
+            )
+
+            canonical = renderer.get(
+
+                "navigationEndpoint",
+
+                {}
+
+            ).get(
+
+                "browseEndpoint",
+
+                {}
+
+            ).get(
+
+                "canonicalBaseUrl",
+
+                ""
+
+            )
+
+            if canonical:
+
+                url = (
+
+                    "https://www.youtube.com"
+
+                    + canonical
+
+                )
+
+            else:
+
+                url = (
+
+                    "https://www.youtube.com/channel/"
+
+                    + cid
+
+                )
+
+            if cid:
+
+                channels[cid] = {
+
+                    "channel_id": cid,
+
+                    "channel_name": name,
+
+                    "channel_url": url,
+
+                    "source": "channel"
+
+                }
 
         return list(
-            data.values()
+
+            channels.values()
+
         )

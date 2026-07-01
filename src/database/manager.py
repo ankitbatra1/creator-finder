@@ -1,5 +1,4 @@
 import sqlite3
-
 from config import DATABASE_PATH
 
 
@@ -20,7 +19,6 @@ class DatabaseManager:
     def create_tables(self):
 
         self.cursor.execute("""
-
         CREATE TABLE IF NOT EXISTS channels(
 
             channel_id TEXT PRIMARY KEY,
@@ -50,62 +48,59 @@ class DatabaseManager:
             processed INTEGER DEFAULT 0
 
         )
+        """)
 
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS contacts(
+
+            channel_id TEXT PRIMARY KEY,
+
+            youtube_email TEXT,
+
+            youtube_phone TEXT,
+
+            website TEXT,
+
+            website_email TEXT,
+
+            website_phone TEXT,
+
+            instagram TEXT,
+
+            instagram_email TEXT,
+
+            instagram_phone TEXT,
+
+            linktree TEXT,
+
+            final_email TEXT,
+
+            final_phone TEXT,
+
+            email_source TEXT,
+
+            phone_source TEXT,
+
+            completed INTEGER DEFAULT 0
+
+        )
+        """)
+
+        self.cursor.execute("""
+        CREATE TABLE IF NOT EXISTS jobs(
+
+            keyword TEXT,
+
+            search_type TEXT,
+
+            status TEXT,
+
+            PRIMARY KEY(keyword, search_type)
+
+        )
         """)
 
         self.conn.commit()
-
-    # =====================================================
-
-    def save_channel(
-
-        self,
-
-        channel
-
-    ):
-
-        self.cursor.execute(
-
-            """
-
-            INSERT OR IGNORE INTO channels(
-
-                channel_id,
-
-                channel_name,
-
-                channel_url,
-
-                keyword_found,
-
-                discovered_from
-
-            )
-
-            VALUES(
-
-                ?,?,?,?,?
-
-            )
-
-            """,
-
-            (
-
-                channel["channel_id"],
-
-                channel["channel_name"],
-
-                channel["channel_url"],
-
-                channel["keyword"],
-
-                channel["source"]
-
-            )
-
-        )
 
     # =====================================================
 
@@ -115,21 +110,15 @@ class DatabaseManager:
 
     # =====================================================
 
-    def total_channels(self):
+    def fetchone(self):
 
-        self.cursor.execute(
+        return self.cursor.fetchone()
 
-            """
+    # =====================================================
 
-            SELECT COUNT(*)
+    def fetchall(self):
 
-            FROM channels
-
-            """
-
-        )
-
-        return self.cursor.fetchone()[0]
+        return self.cursor.fetchall()
 
     # =====================================================
 
@@ -138,11 +127,3 @@ class DatabaseManager:
         self.conn.commit()
 
         self.conn.close()
-
-    def recreate_database(self):
-
-        self.cursor.execute("DROP TABLE IF EXISTS channels")
-
-        self.create_tables()
-
-        self.conn.commit()
